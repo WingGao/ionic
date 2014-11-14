@@ -1,86 +1,12 @@
 /**
- * @private
- * TODO document
+ * @ngdoc service
+ * @name $ionicHistory
+ * @module ionic
+ * @description
+ * $ionicHistory
  */
+
 IonicModule
-.run([
-  '$rootScope',
-  '$state',
-  '$location',
-  '$document',
-  '$ionicPlatform',
-  '$ionicHistory',
-function($rootScope, $state, $location, $document, $ionicPlatform, $ionicHistory) {
-
-  // always reset the keyboard state when change stage
-  $rootScope.$on('$stateChangeStart', function() {
-    ionic.keyboard.hide();
-  });
-
-  $rootScope.$on('$ionicHistory.change', function(e, data) {
-    if (!data) return;
-
-    var viewHistory = $ionicHistory.viewHistory();
-
-    var hist = (data.historyId ? viewHistory.histories[ data.historyId ] : null);
-    if (hist && hist.cursor > -1 && hist.cursor < hist.stack.length) {
-      // the history they're going to already exists
-      // go to it's last view in its stack
-      var view = hist.stack[ hist.cursor ];
-      return view.go(data);
-    }
-
-    // this history does not have a URL, but it does have a uiSref
-    // figure out its URL from the uiSref
-    if (!data.url && data.uiSref) {
-      data.url = $state.href(data.uiSref);
-    }
-
-    if (data.url) {
-      // don't let it start with a #, messes with $location.url()
-      if (data.url.indexOf('#') === 0) {
-        data.url = data.url.replace('#', '');
-      }
-      if (data.url !== $location.url()) {
-        // we've got a good URL, ready GO!
-        $location.url(data.url);
-      }
-    }
-  });
-
-  $rootScope.$ionicGoBack = function() {
-    var backView = $ionicHistory.backView();
-    backView && backView.go();
-  };
-
-  // Set the document title when a new view is shown
-  $rootScope.$on('viewState.viewEnter', function(e, data) {
-    if (data && data.title) {
-      $document[0].title = data.title;
-    }
-  });
-
-  // Triggered when devices with a hardware back button (Android) is clicked by the user
-  // This is a Cordova/Phonegap platform specifc method
-  function onHardwareBackButton(e) {
-    var backView = $ionicHistory.backView();
-    if (backView) {
-      // there is a back view, go to it
-      backView.go();
-    } else {
-      // there is no back view, so close the app instead
-      ionic.Platform.exitApp();
-    }
-    e.preventDefault();
-    return false;
-  }
-  $ionicPlatform.registerBackButtonAction(
-    onHardwareBackButton,
-    PLATFORM_BACK_BUTTON_PRIORITY_VIEW
-  );
-
-}])
-
 .factory('$ionicHistory', [
   '$rootScope',
   '$state',
@@ -103,7 +29,7 @@ function($rootScope, $state, $location, $window) {
   var DIRECTION_NONE = 'none';
 
   var stateChangeCounter = 0;
-  var lastStateId;
+  var lastStateId, nextViewOptions;
 
   var viewHistory = {
     histories: { root: { historyId: 'root', parentHistoryId: null, stack: [], cursor: -1 } },
@@ -245,7 +171,7 @@ function($rootScope, $state, $location, $window) {
           action = null,
           direction = DIRECTION_NONE,
           historyId = hist.historyId,
-          tmp;
+          tmp, x;
 
       if (isAbstractView) {
         // abstract states should not register themselves in the history stack
@@ -366,7 +292,7 @@ function($rootScope, $state, $location, $window) {
             tmp = getHistoryById(forwardView.historyId);
             if (tmp) {
               // the forward has a history
-              for (var x=tmp.stack.length - 1; x >= forwardView.index; x--) {
+              for (x = tmp.stack.length - 1; x >= forwardView.index; x--) {
                 // starting from the end destroy all forwards in this history from this point
                 tmp.stack[x].destroy();
                 tmp.stack.splice(x);
@@ -419,6 +345,23 @@ function($rootScope, $state, $location, $window) {
 
         // add the new view to this history's stack
         hist.stack.push(viewHistory.views[viewId]);
+      }
+
+      if (nextViewOptions) {
+        if (nextViewOptions.disableAnimate) direction = DIRECTION_NONE;
+        if (nextViewOptions.disableBack) viewHistory.views[viewId].backViewId = null;
+        if (nextViewOptions.historyRoot) {
+          for (x = 0; x < hist.stack.length; x++) {
+            if (hist.stack[x].viewId === viewId) {
+              hist.stack[x].index = 0;
+              hist.stack[x].backViewId = hist.stack[x].forwardViewId = null;
+            } else {
+              delete viewHistory.views[hist.stack[x].viewId];
+            }
+          }
+          hist.stack = [viewHistory.views[viewId]];
+        }
+        nextViewOptions = null;
       }
 
       setNavViews(viewId);
@@ -504,6 +447,10 @@ function($rootScope, $state, $location, $window) {
       }
     },
 
+    goBack: function() {
+      viewHistory.backView && viewHistory.backView.go();
+    },
+
     clearHistory: function() {
       var
       histories = viewHistory.histories,
@@ -536,8 +483,97 @@ function($rootScope, $state, $location, $window) {
       if (currentView) {
         setNavViews(currentView.viewId);
       }
+    },
+
+    nextViewOptions: function(opts) {
+      if (arguments.length) {
+        if (opts === null) {
+          nextViewOptions = opts;
+        } else {
+          nextViewOptions = nextViewOptions || {};
+          extend(nextViewOptions, opts);
+        }
+      }
+      return nextViewOptions;
     }
 
   };
+
+}])
+
+.run([
+  '$rootScope',
+  '$state',
+  '$location',
+  '$document',
+  '$ionicPlatform',
+  '$ionicHistory',
+function($rootScope, $state, $location, $document, $ionicPlatform, $ionicHistory) {
+
+  // always reset the keyboard state when change stage
+  $rootScope.$on('$stateChangeStart', function() {
+    ionic.keyboard.hide();
+  });
+
+  $rootScope.$on('$ionicHistory.change', function(e, data) {
+    if (!data) return;
+
+    var viewHistory = $ionicHistory.viewHistory();
+
+    var hist = (data.historyId ? viewHistory.histories[ data.historyId ] : null);
+    if (hist && hist.cursor > -1 && hist.cursor < hist.stack.length) {
+      // the history they're going to already exists
+      // go to it's last view in its stack
+      var view = hist.stack[ hist.cursor ];
+      return view.go(data);
+    }
+
+    // this history does not have a URL, but it does have a uiSref
+    // figure out its URL from the uiSref
+    if (!data.url && data.uiSref) {
+      data.url = $state.href(data.uiSref);
+    }
+
+    if (data.url) {
+      // don't let it start with a #, messes with $location.url()
+      if (data.url.indexOf('#') === 0) {
+        data.url = data.url.replace('#', '');
+      }
+      if (data.url !== $location.url()) {
+        // we've got a good URL, ready GO!
+        $location.url(data.url);
+      }
+    }
+  });
+
+  $rootScope.$ionicGoBack = function() {
+    $ionicHistory.goBack();
+  };
+
+  // Set the document title when a new view is shown
+  $rootScope.$on('$ionicView.afterEnter', function(ev, data) {
+    if (data && data.title) {
+      $document[0].title = data.title;
+    }
+  });
+
+  // Triggered when devices with a hardware back button (Android) is clicked by the user
+  // This is a Cordova/Phonegap platform specifc method
+  function onHardwareBackButton(e) {
+    var backView = $ionicHistory.backView();
+    if (backView) {
+      // there is a back view, go to it
+      backView.go();
+    } else {
+      // there is no back view, so close the app instead
+      ionic.Platform.exitApp();
+    }
+    e.preventDefault();
+    return false;
+  }
+  $ionicPlatform.registerBackButtonAction(
+    onHardwareBackButton,
+    PLATFORM_BACK_BUTTON_PRIORITY_VIEW
+  );
 
 }]);

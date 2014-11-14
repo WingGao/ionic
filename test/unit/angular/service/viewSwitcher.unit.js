@@ -79,6 +79,17 @@ describe('Ionic View Switcher', function() {
     expect(d.direction).toEqual('forward');
   }));
 
+  it('should set showBack when the view data sets it', inject(function($ionicViewSwitcher) {
+    var d = $ionicViewSwitcher.getTransitionData(null, null, null, null, true);
+    expect(d.showBack).toEqual(true);
+
+    d = $ionicViewSwitcher.getTransitionData(null, null, null, null, false);
+    expect(d.showBack).toEqual(false);
+
+    d = $ionicViewSwitcher.getTransitionData(null, null, null, null, null);
+    expect(d.showBack).toEqual(false);
+  }));
+
   it('should get an empty entering element with an empty navViewElement', inject(function($ionicViewSwitcher) {
     var navViewElement = angular.element('<div class="view-container">');
     var switcher = $ionicViewSwitcher.create(null, navViewElement, {}, {});

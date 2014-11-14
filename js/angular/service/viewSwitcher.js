@@ -29,8 +29,7 @@ function($timeout, $compile, $controller, $document, $ionicClickBlock, $ionicCon
   var VIEW_STATUS_STAGED = 'stage';
 
   var transitionCounter = 0;
-  var nextTransition;
-  var nextDirection;
+  var nextTransition, nextDirection;
   ionic.transition = ionic.transition || {};
   ionic.transition.isActive = false;
   var isActiveTimer;
@@ -71,7 +70,7 @@ function($timeout, $compile, $controller, $document, $ionicClickBlock, $ionicCon
     var state = viewState(viewLocals);
     enteringView = enteringView || {};
 
-    var transition = nextTransition || ionic.DomUtil.cachedAttr(enteringEle, 'view-transition') || state.viewTransition || $ionicConfig.views.transition() || 'none';
+    var transition = nextTransition || ionic.DomUtil.cachedAttr(enteringEle, 'view-transition') || state.viewTransition || $ionicConfig.views.transition() || 'ios';
     direction = nextDirection || ionic.DomUtil.cachedAttr(enteringEle, 'view-direction') || state.viewDirection || direction || 'none';
     var shouldAnimate = (transition !== 'none' && direction !== 'none');
 
@@ -209,7 +208,7 @@ function($timeout, $compile, $controller, $document, $ionicClickBlock, $ionicCon
           switcher.emit('before', transData);
 
           // 1) get the transition ready and see if it'll animate
-          var transitionFn = $ionicConfig.views.transitionFn();
+          var transitionFn = $ionicConfig.transitions.views[$ionicConfig.views.transition()];
           var viewTransition = transitionFn(enteringEle, leavingEle, direction, transData.shouldAnimate);
 
           if (viewTransition.shouldAnimate) {
@@ -288,7 +287,7 @@ function($timeout, $compile, $controller, $document, $ionicClickBlock, $ionicCon
           if (leavingEle) {
             scope = leavingEle.scope();
             if (scope) {
-              scope.$emit('$ionicView.' + step + 'Leaving', transData);
+              scope.$emit('$ionicView.' + step + 'Leave', transData);
             }
           }
         },

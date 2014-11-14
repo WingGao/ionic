@@ -21,7 +21,6 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
   var headerBars = [];
   var navElementHtml = {};
   var isVisible = true;
-  var navBarConfig = $ionicConfig.navBar;
   var queuedTransitionStart, queuedTransitionEnd, latestTransitionId;
 
   $element.parent().data(DATA_NAV_BAR_CTRL, self);
@@ -146,8 +145,8 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
       if (!btnsEle) return;
 
       var appendToRight = (buttonType == 'rightButtons') ||
-                          (buttonType == SECONDARY_BUTTONS && navBarConfig.positionSecondaryButtons() != 'left') ||
-                          (buttonType == PRIMARY_BUTTONS && navBarConfig.positionPrimaryButtons() == 'right');
+                          (buttonType == SECONDARY_BUTTONS && $ionicConfig.navBar.positionSecondaryButtons() != 'left') ||
+                          (buttonType == PRIMARY_BUTTONS && $ionicConfig.navBar.positionPrimaryButtons() == 'right');
 
       if (appendToRight) {
         // right side
@@ -195,7 +194,7 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
 
   self.update = function(viewData) {
-    var showNavBar = !viewData.hasHeaderBar;
+    var showNavBar = !viewData.hasHeaderBar && viewData.showNavBar;
     viewData.transition = $ionicConfig.navBar.transition();
 
     if (!showNavBar) {
@@ -211,6 +210,8 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
     // update the entering header bar's title
     self.title(viewData.title, enteringHeaderBar);
+
+    self.showBar(showNavBar);
 
     // update the buttons, depending if the view has their own or not
     if (viewData.buttons) {
@@ -228,7 +229,7 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
   self.transition = function(enteringHeaderBar, leavingHeaderBar, viewData) {
     var enteringHeaderBarCtrl = enteringHeaderBar.controller();
-    var transitionFn = navBarConfig.transitionFn();
+    var transitionFn = $ionicConfig.transitions.navBar[$ionicConfig.navBar.transition()];
     var transitionId = viewData.transitionId;
 
     enteringHeaderBarCtrl.beforeEnter(viewData);
@@ -249,7 +250,7 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
     navBarTransition.run(0);
 
-    $timeout(enteringHeaderBarCtrl.alignTitle, 16);
+    $timeout(enteringHeaderBarCtrl.align, 16);
 
     queuedTransitionStart = function() {
       if (latestTransitionId !== transitionId) return;
@@ -293,8 +294,11 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
 
   self.showBar = function(shouldShow) {
-    self.visibleBar(shouldShow);
-    $scope.$parent.$hasHeader = !!shouldShow;
+    if (arguments.length) {
+      self.visibleBar(shouldShow);
+      $scope.$parent.$hasHeader = !!shouldShow;
+    }
+    return !!$scope.$parent.$hasHeader;
   };
 
 
@@ -323,6 +327,7 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
     headerBar = headerBar || getOnScreenHeaderBar();
     headerBar && headerBar.showBack(show);
     $scope.$isBackButtonShown = !!show;
+    return !!show;
   };
 
 
@@ -334,6 +339,12 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
       $scope.$title = newTitleText;
     }
     return $scope.$title;
+  };
+
+
+  self.align = function(val, headerBar) {
+    headerBar = headerBar || getOnScreenHeaderBar();
+    headerBar && headerBar.controller().align(val);
   };
 
 
