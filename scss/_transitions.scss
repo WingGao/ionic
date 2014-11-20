@@ -103,9 +103,9 @@ $android-transition-timing-leaving:          cubic-bezier(0.4, 0, 1, 1) !default
     z-index: $z-index-tabs + 1;
   }
 
-  [history-cursor="after-root"] > .has-tabs-top {
-    top: $bar-height;
-  }
+//  [history-cursor="after-root"] > .has-tabs-top {
+//    top: $bar-height;
+//  }
 
   .tabs-top.tabs-striped > .view-container {
     position: static;
