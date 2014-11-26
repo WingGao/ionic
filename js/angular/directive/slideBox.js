@@ -86,8 +86,8 @@ function($ionicSlideBoxDelegate, $window) {
     // We just make it so the slidebox is *always* as large as its offsetParent.
     function repositionSlideBox() {
       element.css({
-        width: (element[0].offsetParent || element[0].parentNode || {}).offsetWidth + 'px',
-        height: (element[0].offsetParent || element[0].parentNode || {}).offsetHeight + 'px'
+        width: (element[0].parentNode || {}).offsetWidth + 'px',
+        height: (element[0].parentNode || {}).offsetHeight + 'px'
       });
     }
 
