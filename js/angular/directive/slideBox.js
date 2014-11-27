@@ -13,17 +13,19 @@
  *
  * @usage
  * ```html
- * <ion-slide-box on-slide-changed="slideHasChanged($slideIndex)" loop="shouldLoop" auto-play="3000">
- *   <ion-slide>
- *     <div class="box blue"><h1>BLUE</h1></div>
- *   </ion-slide>
- *   <ion-slide>
- *     <div class="box yellow"><h1>YELLOW</h1></div>
- *   </ion-slide>
- *   <ion-slide>
- *     <div class="box pink"><h1>PINK</h1></div>
- *   </ion-slide>
- * </ion-slide-box>
+ * <ion-content>
+ *   <ion-slide-box on-slide-changed="slideHasChanged($slideIndex)" loop="shouldLoop" auto-play="3000">
+ *     <ion-slide>
+ *       <div class="box blue"><h1>BLUE</h1></div>
+ *     </ion-slide>
+ *     <ion-slide>
+ *       <div class="box yellow"><h1>YELLOW</h1></div>
+ *     </ion-slide>
+ *     <ion-slide>
+ *       <div class="box pink"><h1>PINK</h1></div>
+ *     </ion-slide>
+ *   </ion-slide-box>
+ * </ion-content>
  * ```
  *
  * @param {expression=} selected A model bound to the selected slide index.
@@ -37,7 +39,8 @@ IonicModule
 .directive('ionSlideBox', [
   '$ionicSlideBoxDelegate',
   '$window',
-function($ionicSlideBoxDelegate, $window) {
+  '$ionicHistory',
+function($ionicSlideBoxDelegate, $window, $ionicHistory) {
 
   return {
     restrict: 'E',
@@ -62,7 +65,11 @@ function($ionicSlideBoxDelegate, $window) {
   function postLink(scope, element, attr, slideBoxCtrl) {
     element.addClass('slider');
 
-    var deregister = $ionicSlideBoxDelegate._registerInstance(slideBoxCtrl, attr.delegateHandle);
+    var deregister = $ionicSlideBoxDelegate._registerInstance(
+      slideBoxCtrl, attr.delegateHandle, function() {
+        return $ionicHistory.isActiveScope(scope);
+      }
+    );
 
     watchSelected();
     isDefined(attr.loop) && watchLoop();
@@ -99,9 +106,7 @@ function($ionicSlideBoxDelegate, $window) {
             $index: newIndex,
             $slideIndex: newIndex
           });
-          if (slideBoxCtrl.selected() !== newIndex) {
-            slideBoxCtrl.select(newIndex);
-          }
+          slideBoxCtrl.select(newIndex);
         }
       });
     }

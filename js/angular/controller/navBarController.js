@@ -8,7 +8,8 @@ IonicModule
   '$timeout',
   '$ionicNavBarDelegate',
   '$ionicConfig',
-function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $ionicConfig) {
+  '$ionicHistory',
+function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $ionicConfig, $ionicHistory) {
 
   var CSS_HIDE = 'hide';
   var DATA_NAV_BAR_CTRL = '$ionNavBarController';
@@ -32,7 +33,7 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
   self.init = function() {
     $element.addClass('nav-bar-container');
-    ionic.DomUtil.cachedAttr($element, 'nav-bar-transition', $ionicConfig.navBar.transition());
+    ionic.DomUtil.cachedAttr($element, 'nav-bar-transition', $ionicConfig.views.transition());
 
     // create two nav bar blocks which will trade out which one is shown
     self.createHeaderBar(false);
@@ -46,8 +47,10 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
     var containerEle = jqLite('<div class="nav-bar-block">');
     ionic.DomUtil.cachedAttr(containerEle, 'nav-bar', isActive ? 'active' : 'cached');
 
-    var headerBarEle = jqLite('<ion-header-bar>').addClass($attrs.class);
-    var titleEle = jqLite('<div class="title title-' + $ionicConfig.navBar.alignTitle() + '">');
+    var alignTitle = $attrs.alignTitle || $ionicConfig.navBar.alignTitle();
+    var headerBarEle = jqLite('<ion-header-bar>').addClass($attrs.class).attr('align-title', alignTitle);
+    if (isDefined($attrs.noTapScroll)) headerBarEle.attr('no-tap-scroll', $attrs.noTapScroll);
+    var titleEle = jqLite('<div class="title title-' + alignTitle + '">');
     var navEle = {};
     var lastViewBtnsEle = {};
     var leftButtonsEle, rightButtonsEle;
@@ -66,6 +69,11 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
       positionButtons(navEle[buttonType], buttonType);
     });
 
+    // add header-item to the root children
+    for (var x = 0; x < headerBarEle[0].children.length; x++) {
+      headerBarEle[0].children[x].classList.add('header-item');
+    }
+
     // compile header and append to the DOM
     containerEle.append(headerBarEle);
     $element.append($compile(containerEle)($scope.$new()));
@@ -74,9 +82,6 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
     var headerBarInstance = {
       isActive: isActive,
-      showBack: function(shouldShow) {
-        headerBarCtrl.showBack(shouldShow);
-      },
       title: function(newTitleText) {
         headerBarCtrl.title(newTitleText);
       },
@@ -195,7 +200,7 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
   self.update = function(viewData) {
     var showNavBar = !viewData.hasHeaderBar && viewData.showNavBar;
-    viewData.transition = $ionicConfig.navBar.transition();
+    viewData.transition = $ionicConfig.views.transition();
 
     if (!showNavBar) {
       viewData.direction = 'none';
@@ -204,9 +209,12 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
     self.enable(showNavBar);
     var enteringHeaderBar = self.isInitialized ? getOffScreenHeaderBar() : getOnScreenHeaderBar();
     var leavingHeaderBar = self.isInitialized ? getOnScreenHeaderBar() : null;
+    var enteringHeaderCtrl = enteringHeaderBar.controller();
 
     // update if the entering header should show the back button or not
-    self.showBackButton(viewData.showBack, enteringHeaderBar);
+    enteringHeaderCtrl.enableBack(viewData.enableBack, true);
+    enteringHeaderCtrl.showBack(viewData.showBack, true);
+    enteringHeaderCtrl.updateBackButton();
 
     // update the entering header bar's title
     self.title(viewData.title, enteringHeaderBar);
@@ -229,14 +237,14 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
 
   self.transition = function(enteringHeaderBar, leavingHeaderBar, viewData) {
     var enteringHeaderBarCtrl = enteringHeaderBar.controller();
-    var transitionFn = $ionicConfig.transitions.navBar[$ionicConfig.navBar.transition()];
+    var transitionFn = $ionicConfig.transitions.navBar[viewData.transition];
     var transitionId = viewData.transitionId;
 
     enteringHeaderBarCtrl.beforeEnter(viewData);
 
     var navBarTransition = transitionFn(enteringHeaderBar, leavingHeaderBar, viewData.direction, viewData.shouldAnimate && self.isInitialized);
 
-    ionic.DomUtil.cachedAttr($element, 'nav-bar-transition', $ionicConfig.navBar.transition());
+    ionic.DomUtil.cachedAttr($element, 'nav-bar-transition', viewData.transition);
     ionic.DomUtil.cachedAttr($element, 'nav-bar-direction', viewData.direction);
 
     if (navBarTransition.shouldAnimate) {
@@ -323,20 +331,41 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
   };
 
 
-  self.showBackButton = function(show, headerBar) {
-    headerBar = headerBar || getOnScreenHeaderBar();
-    headerBar && headerBar.showBack(show);
-    $scope.$isBackButtonShown = !!show;
-    return !!show;
+  /**
+   * @ngdoc method
+   * @name $ionicNavBar#showBackButton
+   * @description Show/hide the nav bar back button when there is a
+   * back view. If the back button is not possible, for example, the
+   * first view in the stack, then this will not force the back button
+   * to show.
+   */
+  self.showBackButton = function(shouldShow) {
+    for (var x = 0; x < headerBars.length; x++) {
+      headerBars[x].controller().showNavBack(!!shouldShow);
+    }
+    $scope.$isBackButtonShown = !!shouldShow;
+    return $scope.$isBackButtonShown;
+  };
+
+
+  /**
+   * @ngdoc method
+   * @name $ionicNavBar#showActiveBackButton
+   * @description Show/hide only the active header bar's back button.
+   */
+  self.showActiveBackButton = function(shouldShow) {
+    var headerBar = getOnScreenHeaderBar();
+    headerBar && headerBar.controller().showBack(shouldShow);
   };
 
 
   self.title = function(newTitleText, headerBar) {
-    if (arguments.length) {
+    if (isDefined(newTitleText)) {
       newTitleText = newTitleText || '';
       headerBar = headerBar || getOnScreenHeaderBar();
       headerBar && headerBar.title(newTitleText);
       $scope.$title = newTitleText;
+      $ionicHistory.currentTitle(newTitleText);
     }
     return $scope.$title;
   };
@@ -346,6 +375,34 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
     headerBar = headerBar || getOnScreenHeaderBar();
     headerBar && headerBar.controller().align(val);
   };
+
+
+  // DEPRECATED, as of v1.0.0-beta14 -------
+  self.changeTitle = function(val) {
+    deprecatedWarning('changeTitle(val)', 'title(val)');
+    self.title(val);
+  };
+  self.setTitle = function(val) {
+    deprecatedWarning('setTitle(val)', 'title(val)');
+    self.title(val);
+  };
+  self.getTitle = function() {
+    deprecatedWarning('getTitle()', 'title()');
+    return self.title();
+  };
+  self.back = function() {
+    deprecatedWarning('back()', '$ionicHistory.goBack()');
+    $ionicHistory.goBack();
+  };
+  self.getPreviousTitle = function() {
+    deprecatedWarning('getPreviousTitle()', '$ionicHistory.backTitle()');
+    $ionicHistory.goBack();
+  };
+  function deprecatedWarning(oldMethod, newMethod) {
+    var warn = console.warn || console.log;
+    warn && warn('navBarController.' + oldMethod + ' is deprecated, please use ' + newMethod + ' instead');
+  }
+  // END DEPRECATED -------
 
 
   function createNavElement(type) {
@@ -372,11 +429,6 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
   function navBarAttr(ctrl, val) {
     ctrl && ionic.DomUtil.cachedAttr(ctrl.containerEle(), 'nav-bar', val);
   }
-
-
-  $scope.$on('ionHeaderBar.init', function(ev) {
-    ev.stopPropagation();
-  });
 
 
   $scope.$on('$destroy', function() {

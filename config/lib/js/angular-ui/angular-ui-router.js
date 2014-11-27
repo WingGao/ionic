@@ -1,6 +1,7 @@
 /**
  * State-based routing for AngularJS
  * @version v0.2.10
+ * Ionic fork, updated for Angular v1.3
  * @link http://angular-ui.github.com/
  * @license MIT License, http://www.opensource.org/licenses/MIT
  */
@@ -1131,8 +1132,8 @@ function $UrlRouterProvider(  $urlMatcherFactory) {
    *
    */
   this.$get =
-    [        '$location', '$rootScope', '$injector',
-    function ($location,   $rootScope,   $injector) {
+    [        '$location', '$rootScope', '$injector', '$log',
+    function ($location,   $rootScope,   $injector,   $log) {
       // TODO: Optimize groups of rules with non-empty prefix into some sort of decision tree
       function update(evt) {
         if (evt && evt.defaultPrevented) return;
@@ -1149,7 +1150,7 @@ function $UrlRouterProvider(  $urlMatcherFactory) {
           if (check(rules[i])) return;
         }
         if($location.$$path && $location.$$path !== '/') {
-          console.warn('Routing: No route matched for', $location.$$path + '. Check your Ionic route definitions.');
+          $log.warn('Routing: No route matched for', $location.$$path + '. Check your Ionic route definitions.');
         }
         // always check otherwise last to allow dynamic updates to the set of rules
         if (otherwise) check(otherwise);
@@ -2294,12 +2295,20 @@ function $StateProvider(   $urlRouterProvider,   $urlMatcherFactory,           $
       params = inheritParams($stateParams, params || {}, $state.$current, state);
       var nav = (state && options.lossy) ? state.navigable : state;
       var url = (nav && nav.url) ? nav.url.format(normalize(state.params, params || {})) : null;
-      if (!$locationProvider.html5Mode() && url) {
+
+      var isHtml5 = $locationProvider.html5Mode();
+
+      // Angular 1.3.X +
+        if (isObject(isHtml5)) {
+          isHtml5 = isHtml5.enabled;
+        }
+
+      if (!isHtml5 && url) {
         url = "#" + $locationProvider.hashPrefix() + url;
       }
 
       if (baseHref !== '/') {
-        if ($locationProvider.html5Mode()) {
+        if (isHtml5) {
           url = baseHref.slice(0, -1) + url;
         } else if (options.absolute){
           url = baseHref.slice(1) + url;
@@ -2310,7 +2319,7 @@ function $StateProvider(   $urlRouterProvider,   $urlMatcherFactory,           $
         url = $location.protocol() + '://' +
               $location.host() +
               ($location.port() == 80 || $location.port() == 443 ? '' : ':' + $location.port()) +
-              (!$locationProvider.html5Mode() && url ? '/' : '') +
+              (!isHtml5 && url ? '/' : '') +
               url;
       }
       return url;
@@ -2667,8 +2676,14 @@ function $ViewDirective(   $state,   $injector,   $uiViewScroll) {
 
     if ($animate) {
       return {
-        enter: function(element, target, cb) { $animate.enter(element, null, target, cb); },
-        leave: function(element, cb) { $animate.leave(element, cb); }
+        enter: function(element, target, cb) {
+          var promise = $animate.enter(element, null, target, cb);
+          if (promise && promise.then) promise.then(cb);
+        },
+        leave: function(element, cb) {
+          var promise = $animate.leave(element, cb);
+          if (promise && promise.then) promise.then(cb);
+        }
       };
     }
 

@@ -142,6 +142,61 @@
  * @returns {integer}
  */
 
+/**
+ * @ngdoc method
+ * @name $ionicConfigProvider#navBar.alignTitle
+ * @description Which side of the navBar to align the title. Default `center`.
+ *
+ * @param {string} value side of the navBar to align the title.
+ *
+ * * `platform`: Dynamically choose the correct title style depending on the platform
+ * the app is running from. If the platform is `ios`, it will default to `center`.
+ * If the platform is `android`, it will default to `left`. If the platform is not
+ * `ios` or `android`, it will default to `center`.
+ *
+ * * `left`: Left align the title in the navBar
+ * * `center`: Center align the title in the navBar
+ * * `right`: Right align the title in the navBar.
+ *
+ * @returns {string} value
+ */
+
+/**
+  * @ngdoc method
+  * @name $ionicConfigProvider#navBar.positionPrimaryButtons
+  * @description Which side of the navBar to align the primary navBar buttons. Default `left`.
+  *
+  * @param {string} value side of the navBar to align the primary navBar buttons.
+  *
+  * * `platform`: Dynamically choose the correct title style depending on the platform
+  * the app is running from. If the platform is `ios`, it will default to `left`.
+  * If the platform is `android`, it will default to `right`. If the platform is not
+  * `ios` or `android`, it will default to `left`.
+  *
+  * * `left`: Left align the primary navBar buttons in the navBar
+  * * `right`: Right align the primary navBar buttons in the navBar.
+  *
+  * @returns {string} value
+  */
+
+/**
+ * @ngdoc method
+ * @name $ionicConfigProvider#navBar.positionSecondaryButtons
+ * @description Which side of the navBar to align the secondary navBar buttons. Default `right`.
+ *
+ * @param {string} value side of the navBar to align the secondary navBar buttons.
+ *
+ * * `platform`: Dynamically choose the correct title style depending on the platform
+ * the app is running from. If the platform is `ios`, it will default to `right`.
+ * If the platform is `android`, it will default to `right`. If the platform is not
+ * `ios` or `android`, it will default to `right`.
+ *
+ * * `left`: Left align the secondary navBar buttons in the navBar
+ * * `right`: Right align the secondary navBar buttons in the navBar.
+ *
+ * @returns {string} value
+ */
+
 IonicModule
 .provider('$ionicConfig', function() {
 
@@ -153,20 +208,20 @@ IonicModule
     views: {
       maxCache: PLATFORM,
       forwardCache: PLATFORM,
-      transition: PLATFORM,
-      transitionFn: PLATFORM
+      transition: PLATFORM
     },
     navBar: {
       alignTitle: PLATFORM,
       positionPrimaryButtons: PLATFORM,
-      positionSecondaryButtons: PLATFORM,
-      transition: PLATFORM,
-      transitionFn: PLATFORM
+      positionSecondaryButtons: PLATFORM
     },
     backButton: {
       icon: PLATFORM,
       text: PLATFORM,
       previousTitleText: PLATFORM
+    },
+    form: {
+      checkbox: PLATFORM
     },
     tabs: {
       style: PLATFORM,
@@ -194,14 +249,17 @@ IonicModule
     navBar: {
       alignTitle: 'center',
       positionPrimaryButtons: 'left',
-      positionSecondaryButtons: 'right',
-      transition: 'ios'
+      positionSecondaryButtons: 'right'
     },
 
     backButton: {
       icon: 'ion-ios7-arrow-back',
       text: 'Back',
       previousTitleText: true
+    },
+
+    form: {
+      checkbox: 'circle'
     },
 
     tabs: {
@@ -234,14 +292,17 @@ IonicModule
     navBar: {
       alignTitle: 'left',
       positionPrimaryButtons: 'right',
-      positionSecondaryButtons: 'right',
-      transition: 'android'
+      positionSecondaryButtons: 'right'
     },
 
     backButton: {
       icon: 'ion-android-arrow-back',
       text: false,
       previousTitleText: false
+    },
+
+    form: {
+      checkbox: 'square'
     },
 
     tabs: {
@@ -380,6 +441,27 @@ IonicModule
     return provider.transitions.views.android(enteringHeaderBar.containerEle(),
                                               leavingHeaderBar && leavingHeaderBar.containerEle(),
                                               direction, shouldAnimate);
+  };
+
+
+  // No Transition
+  // -----------------------
+
+  provider.transitions.views.none = function(enteringEle, leavingEle) {
+    return {
+      run: function(step) {
+        provider.transitions.views.android(enteringEle, leavingEle, false, false).run(step);
+      }
+    };
+  };
+
+  provider.transitions.navBar.none = function(enteringHeaderBar, leavingHeaderBar) {
+    return {
+      run: function(step) {
+        provider.transitions.navBar.ios(enteringHeaderBar, leavingHeaderBar, false, false).run(step);
+        provider.transitions.navBar.android(enteringHeaderBar, leavingHeaderBar, false, false).run(step);
+      }
+    };
   };
 
 

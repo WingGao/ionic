@@ -3,7 +3,16 @@
  * @name $ionicHistory
  * @module ionic
  * @description
- * $ionicHistory
+ * $ionicHistory is what keeps track of an app's views as the user navigates. Like browser,
+ * an Ionic app is able to know what the previous view was, the current view, and what the
+ * forward view was (if there was one). However, a typical web browser only keeps track of one
+ * history stack in a linear fashion.
+ *
+ * Ionic's `$ionicHistory` is able to keep track of multiple histories, and persist where the
+ * user is as they navigate between different views, and different histories. For example, an
+ * app with tabs has it's own history stack for each tab. This meaning you can navigate a few
+ * views in Tab A, then navigate a few in Tab B, and when you return to Tab A, the existing
+ * stack is maintained.
  */
 
 IonicModule
@@ -12,7 +21,9 @@ IonicModule
   '$state',
   '$location',
   '$window',
-function($rootScope, $state, $location, $window) {
+  '$ionicViewSwitcher',
+  '$ionicNavViewDelegate',
+function($rootScope, $state, $location, $window, $ionicViewSwitcher, $ionicNavViewDelegate) {
 
   // history actions while navigating views
   var ACTION_INITIAL_VIEW = 'initialView';
@@ -29,7 +40,7 @@ function($rootScope, $state, $location, $window) {
   var DIRECTION_NONE = 'none';
 
   var stateChangeCounter = 0;
-  var lastStateId, nextViewOptions;
+  var lastStateId, nextViewOptions, forcedNav;
 
   var viewHistory = {
     histories: { root: { historyId: 'root', parentHistoryId: null, stack: [], cursor: -1 } },
@@ -117,7 +128,7 @@ function($rootScope, $state, $location, $window) {
       // nothing found keep climbing up
       parentScope = parentScope.$parent;
     }
-    // no history for for the parent, use the root
+    // no history for the parent, use the root
     return { historyId: 'root', scope: $rootScope };
   }
 
@@ -160,7 +171,7 @@ function($rootScope, $state, $location, $window) {
 
   return {
 
-    register: function(parentScope, isAbstractView) {
+    register: function(parentScope, viewLocals) {
 
       var currentStateId = getCurrentStateId(),
           hist = getHistory(parentScope),
@@ -171,25 +182,20 @@ function($rootScope, $state, $location, $window) {
           action = null,
           direction = DIRECTION_NONE,
           historyId = hist.historyId,
-          tmp, x;
-
-      if (isAbstractView) {
-        // abstract states should not register themselves in the history stack
-        return {
-          action: 'abstractView',
-          direction: DIRECTION_NONE
-        };
-      }
+          url = $location.url(),
+          tmp, x, ele;
 
       if (lastStateId !== currentStateId) {
         lastStateId = currentStateId;
         stateChangeCounter++;
       }
 
-      if (viewHistory.forcedNav) {
+      if (forcedNav) {
         // we've previously set exactly what to do
-        ionic.Utils.extend(rsp, viewHistory.forcedNav);
-        viewHistory.forcedNav = null;
+        viewId = forcedNav.viewId;
+        action = forcedNav.action;
+        direction = forcedNav.direction;
+        forcedNav = null;
 
       } else if (backView && backView.stateId === currentStateId) {
         // they went back one, set the old current view as a forward view
@@ -275,6 +281,17 @@ function($rootScope, $state, $location, $window) {
 
       } else {
 
+        // create an element from the viewLocals template
+        ele = $ionicViewSwitcher.createViewEle(viewLocals);
+        if (this.isAbstractEle(ele)) {
+          console.log('VIEW', 'abstractView', DIRECTION_NONE, viewHistory.currentView);
+          return {
+            action: 'abstractView',
+            direction: DIRECTION_NONE,
+            ele: ele
+          };
+        }
+
         // set a new unique viewId
         viewId = ionic.Utils.nextUid();
 
@@ -340,7 +357,7 @@ function($rootScope, $state, $location, $window) {
           stateId: currentStateId,
           stateName: this.currentStateName(),
           stateParams: getCurrentStateParams(),
-          url: $location.url()
+          url: url
         });
 
         // add the new view to this history's stack
@@ -366,17 +383,33 @@ function($rootScope, $state, $location, $window) {
 
       setNavViews(viewId);
 
-      hist.cursor = viewHistory.currentView.index;
+      if (viewHistory.backView && historyId == viewHistory.backView.historyId && currentStateId == viewHistory.backView.stateId && url == viewHistory.backView.url) {
+        for (x = 0; x < hist.stack.length; x++) {
+          if (hist.stack[x].viewId == viewId) {
+            action = 'dupNav';
+            direction = DIRECTION_NONE;
+            hist.stack[x - 1].forwardViewId = viewHistory.forwardView = null;
+            viewHistory.currentView.index = viewHistory.backView.index;
+            viewHistory.currentView.backViewId = viewHistory.backView.backViewId;
+            viewHistory.backView = getBackView(viewHistory.backView);
+            hist.stack.splice(x, 1);
+            break;
+          }
+        }
+      }
 
-      console.log('VIEW:', viewId, (viewHistory.views[viewId] && viewHistory.views[viewId].url), '  history:', historyId, '  action:', action, '  direction:', direction, '  ishistoryRoot:', viewHistory.currentView.index === 0);
+      console.log('VIEW', action, direction, viewHistory.currentView);
+
+      hist.cursor = viewHistory.currentView.index;
 
       return {
         viewId: viewId,
         action: action,
         direction: direction,
         historyId: historyId,
-        showBack: !!(viewHistory.backView && viewHistory.backView.historyId === viewHistory.currentView.historyId),
-        isHistoryRoot: (viewHistory.currentView.index === 0)
+        enableBack: !!(viewHistory.backView && viewHistory.backView.historyId === viewHistory.currentView.historyId),
+        isHistoryRoot: (viewHistory.currentView.index === 0),
+        ele: ele
       };
     },
 
@@ -384,19 +417,54 @@ function($rootScope, $state, $location, $window) {
       scope.$historyId = ionic.Utils.nextUid();
     },
 
-    viewHistory: function() {
-      return viewHistory;
-    },
-
     createView: function(data) {
       var newView = new View();
       return newView.initialize(data);
     },
 
-    currentView: function() {
+    getViewById: getViewById,
+
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#viewHistory
+     * @description The app's view history data, such as all the views and histories, along
+     * with how they are ordered and linked together within the navigation stack.
+     * @returns {object} Returns an object containing the apps view history data.
+     */
+    viewHistory: function() {
+      return viewHistory;
+    },
+
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#currentView
+     * @description The app's current view.
+     * @returns {object} Returns the current view.
+     */
+    currentView: function(view) {
+      if (arguments.length) {
+        viewHistory.currentView = view;
+      }
       return viewHistory.currentView;
     },
 
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#currentHistoryId
+     * @description The ID of the history stack which is the parent container of the current view.
+     * @returns {string} Returns the current history ID.
+     */
+    currentHistoryId: function() {
+      return viewHistory.currentView ? viewHistory.currentView.historyId : null;
+    },
+
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#currentTitle
+     * @description Gets and sets the current view's title.
+     * @param {string=} val The title to update the current view with.
+     * @returns {string} Returns the current view's title.
+     */
     currentTitle: function(val) {
       if (viewHistory.currentView) {
         if (arguments.length) {
@@ -406,22 +474,49 @@ function($rootScope, $state, $location, $window) {
       }
     },
 
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#backView
+     * @description Returns the view that was before the current view in the history stack.
+     * If the user navigated from View A to View B, then View A would be the back view, and
+     * View B would be the current view.
+     * @returns {string} Returns the back view.
+     */
     backView: function() {
       return viewHistory.backView;
     },
 
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#backTitle
+     * @description Gets the back view's title.
+     * @returns {string} Returns the back view's title.
+     */
     backTitle: function() {
       if (viewHistory.backView) {
         return viewHistory.backView.title;
       }
     },
 
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#forwardView
+     * @description Returns the view that was in front of the current view in the history stack.
+     * A forward view would exist if the user navigated from View A to View B, then
+     * navigated back to View A. At this point then View B would be the forward view, and View
+     * A would be the current view.
+     * @returns {string} Returns the back view.
+     */
     forwardView: function() {
       return viewHistory.forwardView;
     },
 
-    getViewById: getViewById,
-
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#currentStateName
+     * @description Returns the current state name.
+     * @returns {string}
+     */
     currentStateName: function() {
       return ($state && $state.current ? $state.current.name : null);
     },
@@ -437,7 +532,7 @@ function($rootScope, $state, $location, $window) {
           if (viewHistory.currentView && viewHistory.currentView.viewId === hist.stack[0].viewId) {
             return;
           }
-          viewHistory.forcedNav = {
+          forcedNav = {
             viewId: hist.stack[0].viewId,
             action: ACTION_MOVE_BACK,
             direction: DIRECTION_BACK
@@ -447,10 +542,20 @@ function($rootScope, $state, $location, $window) {
       }
     },
 
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#goBack
+     * @description Navigates the app to the back view, if a back view exists.
+     */
     goBack: function() {
       viewHistory.backView && viewHistory.backView.go();
     },
 
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#clearHistory
+     * @description Clears out the app's entire history, except for the current view.
+     */
     clearHistory: function() {
       var
       histories = viewHistory.histories,
@@ -485,6 +590,41 @@ function($rootScope, $state, $location, $window) {
       }
     },
 
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#clearCache
+     * @description Removes all cached views within every {@link ionic.directive:ionNavView}.
+     * This both removes the view element from the DOM, and destroy it's scope.
+     */
+    clearCache: function() {
+      $ionicNavViewDelegate._instances.forEach(function(instance) {
+        instance.clearCache();
+      });
+    },
+
+    /**
+     * @ngdoc method
+     * @name $ionicHistory#nextViewOptions
+     * @description Sets options for the next view. This method can be useful to override
+     * certain view/transition defaults right before a view transition happens. For example,
+     * the {@link ionic.directive:menuClose} directive uses this methond internally to ensure
+     * an animated view transition does not happen when a menu is closed, and also sets that
+     * the next view should become this root of its history stack. After the next view has
+     * entered then these options are set back to null.
+     *
+     * Available options:
+     *
+     * * `disableAnimate`: Do not animate the next transition.
+     * * `disableBack`: The next view should forget its back view, and set it to null.
+     * * `historyRoot`: The next view should become the root view in its history stack.
+     *
+     * ```js
+     * $ionicHistory.nextViewOptions({
+     *   disableAnimate: true,
+     *   disableBack: true
+     * });
+     * ```
+     */
     nextViewOptions: function(opts) {
       if (arguments.length) {
         if (opts === null) {
@@ -495,9 +635,35 @@ function($rootScope, $state, $location, $window) {
         }
       }
       return nextViewOptions;
+    },
+
+    isAbstractEle: function(ele) {
+      return !!(ele && (isAbstractTag(ele) || isAbstractTag(ele.children())));
+    },
+
+    isActiveScope: function(scope) {
+      if (!scope) return false;
+
+      var climbScope = scope;
+      var currentHistoryId = this.currentHistoryId();
+      while (climbScope) {
+        if (climbScope.$$disconnected) {
+          return false;
+        }
+        if (currentHistoryId && currentHistoryId == climbScope.$historyId) {
+          return true;
+        }
+        climbScope = climbScope.$parent;
+      }
+
+      return currentHistoryId ? currentHistoryId == 'root' : true;
     }
 
   };
+
+  function isAbstractTag(ele) {
+    return ele && ele.length && /ion-side-menus|ion-tabs/i.test(ele[0].tagName);
+  }
 
 }])
 
@@ -512,7 +678,7 @@ function($rootScope, $state, $location, $document, $ionicPlatform, $ionicHistory
 
   // always reset the keyboard state when change stage
   $rootScope.$on('$stateChangeStart', function() {
-    ionic.keyboard.hide();
+    ionic.keyboard && ionic.keyboard.hide && ionic.keyboard.hide();
   });
 
   $rootScope.$on('$ionicHistory.change', function(e, data) {

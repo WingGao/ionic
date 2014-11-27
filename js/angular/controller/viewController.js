@@ -4,9 +4,8 @@ IonicModule
   '$element',
   '$attrs',
   '$compile',
-  '$ionicHistory',
   '$ionicViewSwitcher',
-function($scope, $element, $attrs, $compile, $ionicHistory, $ionicViewSwitcher) {
+function($scope, $element, $attrs, $compile, $ionicViewSwitcher) {
   var self = this;
   var navElementHtml = {};
   var navViewCtrl;
@@ -20,16 +19,9 @@ function($scope, $element, $attrs, $compile, $ionicHistory, $ionicViewSwitcher) 
     navBarDelegateHandle = delegateHandle;
   });
 
-  var deregIonHeaderBarInit = $scope.$on('ionHeaderBar.init', function(ev){
-    // this view has its own ion-header-bar, remember it should trump other nav bars
-    ev.stopPropagation();
-    hasViewHeaderBar = true;
-  });
-
 
   self.init = function() {
     deregIonNavBarInit();
-    deregIonHeaderBarInit();
 
     var modalCtrl = $element.inheritedData('$ionModalController');
     navViewCtrl = $element.inheritedData('$ionNavViewController');
@@ -49,9 +41,7 @@ function($scope, $element, $attrs, $compile, $ionicHistory, $ionicViewSwitcher) 
     if (transData && !transData.viewNotified) {
       transData.viewNotified = true;
 
-      var viewTitle = $attrs.viewTitle || $attrs.title;
-
-      $ionicHistory.currentTitle(viewTitle);
+      var viewTitle = isDefined($attrs.viewTitle) ? $attrs.viewTitle : $attrs.title;
 
       var buttons = {};
       for (var n in navElementHtml) {
@@ -64,7 +54,8 @@ function($scope, $element, $attrs, $compile, $ionicHistory, $ionicViewSwitcher) 
         transition: transData.transition,
         transitionId: transData.transitionId,
         shouldAnimate: transData.shouldAnimate,
-        showBack: transData.showBack && !attrTrue('hideBackButton'),
+        enableBack: transData.enableBack,
+        showBack: !attrTrue('hideBackButton'),
         buttons: buttons,
         navBarDelegate: navBarDelegateHandle || null,
         showNavBar: !attrTrue('hideNavBar'),
@@ -84,7 +75,6 @@ function($scope, $element, $attrs, $compile, $ionicHistory, $ionicViewSwitcher) 
     if (viewTitleAttr) {
       deregisters.push($attrs.$observe(viewTitleAttr, function(val) {
         navViewCtrl.title(val);
-        $ionicHistory.currentTitle(val);
       }));
     }
 
@@ -99,8 +89,6 @@ function($scope, $element, $attrs, $compile, $ionicHistory, $ionicViewSwitcher) 
         navViewCtrl.showBar(!val);
       }));
     }
-
-    $ionicViewSwitcher.setActiveView($element.parent());
   }
 
 
@@ -122,7 +110,7 @@ function($scope, $element, $attrs, $compile, $ionicHistory, $ionicViewSwitcher) 
 
 
   function attrTrue(key) {
-    return $attrs[key] == 'true' || $attrs[key] === '';
+    return !!$scope.$eval($attrs[key]);
   }
 
 
