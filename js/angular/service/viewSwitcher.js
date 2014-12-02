@@ -134,7 +134,8 @@ function($timeout, $document, $q, $ionicClickBlock, $ionicConfig, $ionicNavBarDe
                 // the existing element should not be cached, don't use it
                 viewEle.data(DATA_ELE_IDENTIFIER, enteringEleIdentifier + ionic.Utils.nextUid());
                 viewEle.data(DATA_DESTROY_ELE, true);
-
+                // destroy the cached view
+                destroyViewEle(viewEle);
               } else {
                 enteringEle = viewEle;
               }
