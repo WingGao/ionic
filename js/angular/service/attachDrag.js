@@ -25,8 +25,12 @@ IonicModule
       ionic.offGesture(dragEndGesture, 'dragend', handleDragEnd);
     });
 
+    var isDragging = false;
     element.on('touchmove pointermove mousemove', function(ev) {
-      if (dragState && dragState.dragging) ev.preventDefault();
+      if (isDragging) ev.preventDefault();
+    });
+    element.on('touchend mouseup mouseleave', function(ev) {
+      isDragging = false;
     });
 
     var dragState;
@@ -50,7 +54,9 @@ IonicModule
         handleDragEnd(ev);
         return;
       }
-      dragState.dragging = true;
+      if (Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+        isDragging = true;
+      }
 
       var percent = getDragPercent(ev.gesture.center.pageX);
       opts.onDrag(percent);
