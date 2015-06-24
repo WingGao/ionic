@@ -369,7 +369,9 @@ function($scope, $element, $attrs, $compile, $timeout, $ionicNavBarDelegate, $io
   self.title = function(newTitleText, headerBar) {
     if (isDefined(newTitleText)) {
       newTitleText = newTitleText || '';
-      headerBar = headerBar || getOnScreenHeaderBar();
+      if(headerBar == null){
+        headerBar = $ionicHistory.backTitle() ? getOffScreenHeaderBar() : getOnScreenHeaderBar();
+      }
       headerBar && headerBar.title(newTitleText);
       $scope.$title = newTitleText;
       $ionicHistory.currentTitle(newTitleText);
