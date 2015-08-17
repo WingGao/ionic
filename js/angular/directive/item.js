@@ -1,7 +1,3 @@
-var ITEM_TPL_CONTENT_ANCHOR =
-  '<a class="item-content" ng-href="{{$href()}}" target="{{$target()}}"></a>';
-var ITEM_TPL_CONTENT =
-  '<div class="item-content"></div>';
 /**
 * @ngdoc directive
 * @name ionItem
@@ -28,7 +24,7 @@ var ITEM_TPL_CONTENT =
 * ```
 */
 IonicModule
-.directive('ionItem', function() {
+.directive('ionItem', ['$$rAF', function($$rAF) {
   return {
     restrict: 'E',
     controller: ['$scope', '$element', function($scope, $element) {
@@ -37,31 +33,55 @@ IonicModule
     }],
     scope: true,
     compile: function($element, $attrs) {
-      var isAnchor = angular.isDefined($attrs.href) ||
-                     angular.isDefined($attrs.ngHref) ||
-                     angular.isDefined($attrs.uiSref);
+      var isAnchor = isDefined($attrs.href) ||
+                     isDefined($attrs.ngHref) ||
+                     isDefined($attrs.uiSref);
       var isComplexItem = isAnchor ||
         //Lame way of testing, but we have to know at compile what to do with the element
         /ion-(delete|option|reorder)-button/i.test($element.html());
 
-        if (isComplexItem) {
-          var innerElement = jqLite(isAnchor ? ITEM_TPL_CONTENT_ANCHOR : ITEM_TPL_CONTENT);
-          innerElement.append($element.contents());
+      if (isComplexItem) {
+        var innerElement = jqLite(isAnchor ? '<a></a>' : '<div></div>');
+        innerElement.addClass('item-content');
 
-          $element.append(innerElement);
-          $element.addClass('item item-complex');
-        } else {
-          $element.addClass('item');
+        if (isDefined($attrs.href) || isDefined($attrs.ngHref)) {
+          innerElement.attr('ng-href', '{{$href()}}');
+          if (isDefined($attrs.target)) {
+            innerElement.attr('target', '{{$target()}}');
+          }
         }
 
-        return function link($scope, $element, $attrs) {
-          $scope.$href = function() {
-            return $attrs.href || $attrs.ngHref;
-          };
-          $scope.$target = function() {
-            return $attrs.target || '_self';
-          };
+        innerElement.append($element.contents());
+
+        $element.addClass('item item-complex')
+                .append(innerElement);
+      } else {
+        $element.addClass('item');
+      }
+
+      return function link($scope, $element, $attrs) {
+        $scope.$href = function() {
+          return $attrs.href || $attrs.ngHref;
         };
+        $scope.$target = function() {
+          return $attrs.target;
+        };
+
+        var content = $element[0].querySelector('.item-content');
+        if (content) {
+          $scope.$on('$collectionRepeatLeave', function() {
+            if (content && content.$$ionicOptionsOpen) {
+              content.style[ionic.CSS.TRANSFORM] = '';
+              content.style[ionic.CSS.TRANSITION] = 'none';
+              $$rAF(function() {
+                content.style[ionic.CSS.TRANSITION] = '';
+              });
+              content.$$ionicOptionsOpen = false;
+            }
+          });
+        }
+      };
+
     }
   };
-});
+}]);

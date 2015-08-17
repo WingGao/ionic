@@ -5,7 +5,7 @@
 
 The best place to start with Ionic is our [documentation page](http://ionicframework.com/docs/).
 
-Ionic currently best supports iOS 6+ and Android 4.1+, with scaled-down support for Android 2.3.
+Ionic currently best supports iOS 7+ and Android 4.1+.
 
 # What is Ionic?
 
@@ -57,34 +57,16 @@ For most cases, you'll need AngularJS as well.  This is bundled in `js/angular/`
 
 ## Community
 
-* Follow [@ionicframework on Twitter](https://twitter.com/ionicframework).
-* Subscribe to the [Ionic Newsletter](http://ionicframework.com/subscribe/).
-* Have a question that's not a feature request or bug report? [Discuss on the Ionic Forum](http://forum.ionicframework.com/).
-* Read our [Blog](http://ionicframework.com/blog/).
-* Have a feature request or find a bug? [Submit an issue](http://ionicframework.com/submit-issue/).
+* Follow [@ionicframework on Twitter](https://twitter.com/ionicframework)
+* Subscribe to the [Ionic Newsletter](http://ionicframework.com/subscribe/)
+* Have a question that's not a feature request or bug report? [Discuss on the Ionic Forum](http://forum.ionicframework.com/)
+* Read our [Blog](http://ionicframework.com/blog/)
+* Have a feature request or find a bug? [Submit an issue](http://ionicframework.com/submit-issue/)
 
 
 ## Authors
 
-**Max Lynch**
-
-+ <https://twitter.com/maxlynch>
-+ <https://github.com/mlynch>
-
-**Ben Sperry**
-
-+ <https://twitter.com/benjsperry>
-+ <https://github.com/bensperry>
-
-**Adam Bradley**
-
-+ <https://twitter.com/adamdbradley>
-+ <https://github.com/adamdbradley>
-
-**Andrew Joslin**
-
-+ <https://twitter.com/andrewtjoslin>
-+ <https://github.com/ajoslin>
+Originally created by [Adam Bradley](http://twitter.com/adamdbradley), [Ben Sperry](http://twitter.com/benjsperry), and [Max Lynch](http://twitter.com/maxlynch), Ionic has seen hundreds of great [contributors](https://github.com/driftyco/ionic/graphs/contributors) from around the world, including Ionic Team Members [Perry Govier](http://twitter.com/perrygovier), [Mike Hartington](http://twitter.com/mhartington), and [Tim Lancina](http://twitter.com/dopernicus).
 
 ## Development
 
@@ -101,13 +83,13 @@ For most cases, you'll need AngularJS as well.  This is bundled in `js/angular/`
 ### Documentation
 
 * Documentation is generated into `dist/ionic-site`.  To test documentation properly, follow these steps:
-  1. Clone ionic-site into `./dist/ionic-site`.
+  1. Clone ionic-site into `./dist/ionic-site`
     - `git clone git@github.com:driftyco/ionic-site dist/ionic-site`
-  2. Start jekyll, telling it to rebuild whenever the site changes.
+  2. Start jekyll, telling it to rebuild whenever the site changes
     - `cd dist/ionic-site && jekyll serve -w`
-  3. Go back to project root and build the docs.
+  3. Go back to project root and build the docs
     - `gulp docs [--doc-version=(versionName|nightly)]`
-  4. Open localhost:4000 and see your changes! Re-run `gulp docs` again whenever you change something, and jekyll will update the site.
+  4. Open localhost:4000 and see your changes! Re-run `gulp docs` again whenever you change something, and jekyll will update the site
 
 ### Demos / Kitchen Sink
 
@@ -120,7 +102,7 @@ For most cases, you'll need AngularJS as well.  This is bundled in `js/angular/`
 
 ### Commit Conventions
 
-* Uses http://github.com/ajoslin/conventional-changelog conventions
+* Uses these [commit conventions](http://github.com/ajoslin/conventional-changelog)
 
 ### Pushing New Release of Ionic
 

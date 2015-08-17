@@ -1,4 +1,4 @@
-var GESTURE_DIRECTIVES = 'onHold onTap onTouch onRelease onDrag onDragUp onDragRight onDragDown onDragLeft onSwipe onSwipeUp onSwipeRight onSwipeDown onSwipeLeft'.split(' ');
+var GESTURE_DIRECTIVES = 'onHold onTap onDoubleTap onTouch onRelease onDragStart onDrag onDragEnd onDragUp onDragRight onDragDown onDragLeft onSwipe onSwipeUp onSwipeRight onSwipeDown onSwipeLeft'.split(' ');
 
 GESTURE_DIRECTIVES.forEach(function(name) {
   IonicModule.directive(name, gestureDirective(name));
@@ -40,6 +40,22 @@ GESTURE_DIRECTIVES.forEach(function(name) {
 
 /**
  * @ngdoc directive
+ * @name onDoubleTap
+ * @module ionic
+ * @restrict A
+ *
+ * @description
+ * Double tap touch at a location.
+ *
+ * @usage
+ * ```html
+ * <button on-double-tap="onDoubleTap()" class="button">Test</button>
+ * ```
+ */
+
+
+/**
+ * @ngdoc directive
  * @name onTouch
  * @module ionic
  * @restrict A
@@ -70,6 +86,21 @@ GESTURE_DIRECTIVES.forEach(function(name) {
  * ```
  */
 
+/**
+ * @ngdoc directive
+ * @name onDragStart
+ * @module ionic
+ * @restrict A
+ *
+ * @description
+ * Called when a drag gesture has started.
+ *
+ * @usage
+ * ```html
+ * <button on-drag-start="onDragStart()" class="button">Test</button>
+ * ```
+ */
+
 
 /**
  * @ngdoc directive
@@ -88,6 +119,20 @@ GESTURE_DIRECTIVES.forEach(function(name) {
  * ```
  */
 
+/**
+ * @ngdoc directive
+ * @name onDragEnd
+ * @module ionic
+ * @restrict A
+ *
+ * @description
+ * Called when a drag gesture has ended.
+ *
+ * @usage
+ * ```html
+ * <button on-drag-end="onDragEnd()" class="button">Test</button>
+ * ```
+ */
 
 /**
  * @ngdoc directive

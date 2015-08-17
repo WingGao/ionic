@@ -57,7 +57,8 @@ IonicModule
   '$ionicTemplateLoader',
   '$ionicPlatform',
   '$ionicBody',
-function($rootScope, $compile, $animate, $timeout, $ionicTemplateLoader, $ionicPlatform, $ionicBody) {
+  'IONIC_BACK_PRIORITY',
+function($rootScope, $compile, $animate, $timeout, $ionicTemplateLoader, $ionicPlatform, $ionicBody, IONIC_BACK_PRIORITY) {
 
   return {
     show: actionSheet
@@ -94,15 +95,26 @@ function($rootScope, $compile, $animate, $timeout, $ionicTemplateLoader, $ionicP
   function actionSheet(opts) {
     var scope = $rootScope.$new(true);
 
-    angular.extend(scope, {
-      cancel: angular.noop,
-      destructiveButtonClicked: angular.noop,
-      buttonClicked: angular.noop,
-      $deregisterBackButton: angular.noop,
+    extend(scope, {
+      cancel: noop,
+      destructiveButtonClicked: noop,
+      buttonClicked: noop,
+      $deregisterBackButton: noop,
       buttons: [],
       cancelOnStateChange: true
     }, opts || {});
 
+    function textForIcon(text) {
+      if (text && /icon/.test(text)) {
+        scope.$actionSheetHasIcon = true;
+      }
+    }
+
+    for (var x = 0; x < scope.buttons.length; x++) {
+      textForIcon(scope.buttons[x].text);
+    }
+    textForIcon(scope.cancelText);
+    textForIcon(scope.destructiveText);
 
     // Compile the template
     var element = scope.element = $compile('<ion-action-sheet ng-class="cssClass" buttons="buttons"></ion-action-sheet>')(scope);
@@ -112,7 +124,7 @@ function($rootScope, $compile, $animate, $timeout, $ionicTemplateLoader, $ionicP
 
     var stateChangeListenDone = scope.cancelOnStateChange ?
       $rootScope.$on('$stateChangeSuccess', function() { scope.cancel(); }) :
-      angular.noop;
+      noop;
 
     // removes the actionSheet from the screen
     scope.removeSheet = function(done) {
@@ -133,7 +145,7 @@ function($rootScope, $compile, $animate, $timeout, $ionicTemplateLoader, $ionicP
         element.remove();
         // scope.cancel.$scope is defined near the bottom
         scope.cancel.$scope = sheetEl = null;
-        (done || angular.noop)();
+        (done || noop)();
       });
     };
 
@@ -145,7 +157,7 @@ function($rootScope, $compile, $animate, $timeout, $ionicTemplateLoader, $ionicP
 
       $animate.addClass(element, 'active').then(function() {
         if (scope.removed) return;
-        (done || angular.noop)();
+        (done || noop)();
       });
       $timeout(function() {
         if (scope.removed) return;
@@ -158,7 +170,7 @@ function($rootScope, $compile, $animate, $timeout, $ionicTemplateLoader, $ionicP
       function() {
         $timeout(scope.cancel);
       },
-      PLATFORM_BACK_BUTTON_PRIORITY_ACTION_SHEET
+      IONIC_BACK_PRIORITY.actionSheet
     );
 
     // called when the user presses the cancel button

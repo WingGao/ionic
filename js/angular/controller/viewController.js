@@ -5,8 +5,7 @@ IonicModule
   '$attrs',
   '$compile',
   '$rootScope',
-  '$ionicViewSwitcher',
-function($scope, $element, $attrs, $compile, $rootScope, $ionicViewSwitcher) {
+function($scope, $element, $attrs, $compile, $rootScope) {
   var self = this;
   var navElementHtml = {};
   var navViewCtrl;
@@ -51,20 +50,14 @@ function($scope, $element, $attrs, $compile, $rootScope, $ionicViewSwitcher) {
         navBarItems[n] = generateNavBarItem(navElementHtml[n]);
       }
 
-      navViewCtrl.beforeEnter({
+      navViewCtrl.beforeEnter(extend(transData, {
         title: viewTitle,
-        direction: transData.direction,
-        transition: transData.transition,
-        navBarTransition: transData.navBarTransition,
-        transitionId: transData.transitionId,
-        shouldAnimate: transData.shouldAnimate,
-        enableBack: transData.enableBack,
         showBack: !attrTrue('hideBackButton'),
         navBarItems: navBarItems,
         navBarDelegate: navBarDelegateHandle || null,
         showNavBar: !attrTrue('hideNavBar'),
         hasHeaderBar: !!hasViewHeaderBar
-      });
+      }));
 
       // make sure any existing observers are cleaned up
       deregisterFns();

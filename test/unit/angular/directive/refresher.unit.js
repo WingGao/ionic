@@ -1,28 +1,32 @@
+[true, false].forEach(function(jsScrollingEnabled) {
 describe('ionRefresher directive', function() {
   beforeEach(module('ionic'));
+  beforeEach(inject(function($ionicConfig) {
+    $ionicConfig.scrolling.jsScrolling(jsScrollingEnabled);
+  }));
   function setup(attrs, scopeProps) {
     var el;
     inject(function($compile, $rootScope) {
       var scope = $rootScope.$new();
-      var ionicScrollCtrl = {
-        _setRefresher: jasmine.createSpy('setRefresher'),
-        scrollView: {
-          finishPullToRefresh: jasmine.createSpy('finishPullToRefresh')
-        }
-      };
 
       angular.extend(scope, scopeProps || {});
 
-      el = angular.element('<ion-refresher '+(attrs||'')+'></ion-refresher>');
-      el.data('$$ionicScrollController', ionicScrollCtrl);
+      parent = angular.element('<ion-content><ion-refresher '+(attrs||'')+'>');
 
-      $compile(el)(scope);
+      //el.data('$$ionicScrollController', ionicScrollCtrl);
+
+      $compile(parent)(scope);
+      el = parent.find('.scroll-refresher');
+      ionic.requestAnimationFrame = function() {};
+      el.refresherCtrl = el.data('$ionRefresherController');
+      spyOn(el.controller('$ionicScroll'),'_setRefresher');
+
       $rootScope.$apply();
     });
     return el;
   }
 
-  it('should error without ionicScroll', inject(function($compile, $rootScope) {
+  it('should error without ionScroll or ionContent', inject(function($compile, $rootScope) {
     expect(function() {
       $compile('<ion-refresher>')($rootScope);
     }).toThrow();
@@ -48,18 +52,15 @@ describe('ionRefresher directive', function() {
     expect(spyMe).toHaveBeenCalled();
   });
 
-  it('should setRefresher on scrollCtrl', function() {
-    var el = setup();
-    expect(el.controller('$ionicScroll')._setRefresher.callCount).toBe(1);
-    expect(el.controller('$ionicScroll')._setRefresher).toHaveBeenCalledWith(
-      el.scope(), el[0]
-    );
-  });
-
   it('should listen for scroll.refreshComplete', function() {
+    // this is only for js scrolling
+    if (!jsScrollingEnabled) return;
+
     var el = setup();
     el.addClass('active');
     var ctrl = el.controller('$ionicScroll');
+    spyOn(ctrl.scrollView, 'finishPullToRefresh');
+
     expect(ctrl.scrollView.finishPullToRefresh).not.toHaveBeenCalled();
     el.scope().$broadcast('scroll.refreshComplete');
     expect(el.hasClass('active')).toBe(true);
@@ -68,9 +69,9 @@ describe('ionRefresher directive', function() {
     expect(ctrl.scrollView.finishPullToRefresh).toHaveBeenCalled();
   });
 
-  it('should have default pullingIcon', function() {
+  it('should not have default pullingIcon', function() {
     var el = setup();
-    expect(el[0].querySelector('.icon-pulling .ion-ios7-arrow-down')).toBeTruthy();
+    expect(el[0].querySelector('.icon-pulling .ion-ios-arrow-down')).toBeFalsy();
   });
   it('should allow custom pullingIcon', function() {
     var el = setup('pulling-icon="super-icon"');
@@ -78,9 +79,18 @@ describe('ionRefresher directive', function() {
     expect(el[0].querySelector('.icon-pulling .super-icon')).toBeTruthy();
   });
 
-  it('should have default refreshingIcon', function() {
+  it('should have default spinner', function() {
     var el = setup();
-    expect(el[0].querySelector('.ion-loading-d')).toBeTruthy();
+    expect(el[0].querySelector('ion-spinner')).toBeTruthy();
+  });
+  it('should allow a custom spinner', function() {
+    var el = setup('spinner="android"');
+    expect(el[0].querySelector('.spinner-android')).toBeTruthy();
+  });
+  it('should allow spinner to be none', function() {
+    var el = setup('spinner="none"');
+    expect(el[0].querySelector('ion-spinner')).not.toBeTruthy();
+    expect(el[0].querySelector('.icon.icon-refreshing')).not.toBeTruthy();
   });
   it('should allow custom refreshingIcon', function() {
     var el = setup('refreshing-icon="monkey-icon"');
@@ -101,4 +111,5 @@ describe('ionRefresher directive', function() {
     var el = setup('disable-pulling-rotation="true"');
     expect(el[0].querySelector('.pulling-rotation-disabled').innerHTML).toBeTruthy();
   });
+});
 });

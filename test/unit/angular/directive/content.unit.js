@@ -1,13 +1,14 @@
 describe('Ionic Content directive', function() {
-  var compile, scope, timeout, window;
+  var compile, scope, timeout, window, ionicConfig;
 
   beforeEach(module('ionic'));
 
-  beforeEach(inject(function($compile, $rootScope, $timeout, $window) {
+  beforeEach(inject(function($compile, $rootScope, $timeout, $window, $ionicConfig) {
     compile = $compile;
     scope = $rootScope;
     timeout = $timeout;
     window = $window;
+    ionicConfig = $ionicConfig;
     ionic.Platform.setPlatform('Android');
   }));
 
@@ -128,6 +129,20 @@ describe('Ionic Content directive', function() {
     expect(vals.top).toBe(300);
   });
 
+  it('Should allow native scrolling to be set by $ionicConfig ', function() {
+    ionicConfig.scrolling.jsScrolling(false);
+    var element = compile('<ion-content></ion-content>')(scope);
+    expect(element.hasClass('overflow-scroll')).toBe(true);
+  });
+
+  it('should call on-scrolling-complete attribute callback with locals', function() {
+    scope.youCompleteMe = jasmine.createSpy('scrollComplete');
+    var element = compile('<ion-content on-scroll-complete="youCompleteMe(scrollLeft, scrollTop)">')(scope);
+    scope.$apply();
+    element.controller('$ionicScroll').scrollView.__scrollingComplete();
+    expect(scope.youCompleteMe).toHaveBeenCalledWith(0, 0);
+  });
+
 });
 /* Tests #555, #1155 */
 describe('Ionic Content Directive scoping', function() {
@@ -151,4 +166,6 @@ describe('Ionic Content Directive scoping', function() {
     expect(input.scope().foo).toBe('bar');
     expect(ctrl.$scope.foo).toBe('bar');
   }));
+
+  
 });

@@ -39,8 +39,7 @@
  * For a complete side menu example, see the
  * {@link ionic.directive:ionSideMenus} documentation.
  */
-IonicModule
-.directive('exposeAsideWhen', ['$window', function($window) {
+IonicModule.directive('exposeAsideWhen', ['$window', function($window) {
   return {
     restrict: 'A',
     require: '^ionSideMenus',
@@ -48,7 +47,7 @@ IonicModule
 
       function checkAsideExpose() {
         var mq = $attr.exposeAsideWhen == 'large' ? '(min-width:768px)' : $attr.exposeAsideWhen;
-        sideMenuCtrl.exposeAside( $window.matchMedia(mq).matches );
+        sideMenuCtrl.exposeAside($window.matchMedia(mq).matches);
         sideMenuCtrl.activeAsideResizing(false);
       }
 
@@ -58,16 +57,14 @@ IonicModule
       }
 
       var debouncedCheck = ionic.debounce(function() {
-        $scope.$apply(function(){
-          checkAsideExpose();
-        });
+        $scope.$apply(checkAsideExpose);
       }, 300, false);
 
-      checkAsideExpose();
+      $scope.$evalAsync(checkAsideExpose);
 
       ionic.on('resize', onResize, $window);
 
-      $scope.$on('$destroy', function(){
+      $scope.$on('$destroy', function() {
         ionic.off('resize', onResize, $window);
       });
 

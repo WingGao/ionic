@@ -35,10 +35,10 @@ function run {
     # Push release to ionic repo: release only
     if [[ "$IS_RELEASE" == "true" ]]; then
       ./scripts/release/publish.sh
-      node_modules/.bin/gulp release-discourse
-      node_modules/.bin/gulp release-github
-      node_modules/.bin/gulp release-tweet
-      node_modules/.bin/gulp release-irc
+      # node_modules/.bin/gulp release-discourse
+      # node_modules/.bin/gulp release-github
+      # node_modules/.bin/gulp release-tweet
+      # node_modules/.bin/gulp release-irc
     fi
     ;;
   1)
@@ -63,11 +63,11 @@ function run {
     ;;
   3)
     # Update demos
-    ./scripts/demo/publish.sh --version-name="$VERSION_NAME"
+    # ./scripts/demo/publish.sh --version-name="$VERSION_NAME"
     ;;
   4)
     # Update cdn
-    ./scripts/cdn/publish.sh --version-name="$VERSION_NAME"
+    ./scripts/cdn/publish.sh --version-name="$VERSION_NAME" --old-version="$OLD_VERSION"
     ;;
   5)
     # Update bower
